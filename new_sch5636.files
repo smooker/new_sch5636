@@ -4,3 +4,4 @@
 ./sch56xx-common.c
 ./sch56xx-common.h
 ./info/w83627hf.c
+./example/new_sch5636.c

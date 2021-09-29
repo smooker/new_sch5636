@@ -20,10 +20,6 @@
 #define DRVNAME "sch5636"
 #define DEVNAME "theseus" /* We only support one model for now */
 
-//smooker
-#define PWM_TO_REG(val) (clamp_val((val), 0, 255))
-
-
 #define SCH5636_REG_FUJITSU_ID		0x780
 #define SCH5636_REG_FUJITSU_REV		0x783
 
@@ -151,7 +147,6 @@ abort:
 	return ret;
 }
 
-//to be used
 static int reg_to_rpm(u16 reg)
 {
 	if (reg == 0)
@@ -163,9 +158,9 @@ static int reg_to_rpm(u16 reg)
 }
 
 static ssize_t name_show(struct device *dev, struct device_attribute *devattr,
-             char *buf)
+			 char *buf)
 {
-    return sysfs_emit(buf, "%s\n", DEVNAME);
+	return sysfs_emit(buf, "%s\n", DEVNAME);
 }
 
 static ssize_t in_value_show(struct device *dev,
@@ -372,36 +367,6 @@ static struct sensor_device_attribute sch5636_fan_attr[] = {
 	SENSOR_ATTR_RO(fan8_alarm, fan_alarm, 7),
 };
 
-////here smooker
-//static const struct attribute_group sch5636_group = {
-//    .attrs = sch5636_attributes,
-//};
-
-//static struct attribute *sch5636_attributes_opt[] = {
-//    VIN_UNIT_ATTRS(1),          //changeme
-//    VIN_UNIT_ATTRS(5),
-//    VIN_UNIT_ATTRS(6),
-
-//    FAN_UNIT_ATTRS(3),
-//    TEMP_UNIT_ATTRS(3),
-//    &sensor_dev_attr_pwm3.dev_attr.attr,
-
-//    &sensor_dev_attr_pwm1_freq.dev_attr.attr,
-//    &sensor_dev_attr_pwm2_freq.dev_attr.attr,
-//    &sensor_dev_attr_pwm3_freq.dev_attr.attr,
-
-//    &sensor_dev_attr_pwm1_enable.dev_attr.attr,
-//    &sensor_dev_attr_pwm2_enable.dev_attr.attr,
-//    &sensor_dev_attr_pwm3_enable.dev_attr.attr,
-
-//    NULL
-//};
-
-//static const struct attribute_group sch5636_group_opt = {
-//    .attrs = sch5636_attributes_opt,
-//};
-
-
 static int sch5636_remove(struct platform_device *pdev)
 {
 	struct sch5636_data *data = platform_get_drvdata(pdev);
@@ -493,7 +458,6 @@ static int sch5636_probe(struct platform_device *pdev)
 			goto error;
 		}
 		data->fan_ctrl[i] = val;
-        pr_info("fans: %d:%d\n", i, val);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(sch5636_attr); i++) {
@@ -501,10 +465,8 @@ static int sch5636_probe(struct platform_device *pdev)
 					 &sch5636_attr[i].dev_attr);
 		if (err)
 			goto error;
- 		 pr_info("attrs: %d\n", i);
 	}
 
-    //????
 	for (i = 0; i < (SCH5636_NO_TEMPS * 3); i++) {
 		if (data->temp_ctrl[i/3] & SCH5636_TEMP_DEACTIVATED)
 			continue;
@@ -513,39 +475,19 @@ static int sch5636_probe(struct platform_device *pdev)
 					&sch5636_temp_attr[i].dev_attr);
 		if (err)
 			goto error;
-		pr_info("temps: %d\n", i);
 	}
 
 	for (i = 0; i < (SCH5636_NO_FANS * 3); i++) {
-        if (data->fan_ctrl[i/3] & SCH5636_FAN_DEACTIVATED) {
-            pr_info("fans deactivated: %d\n", i);
+		if (data->fan_ctrl[i/3] & SCH5636_FAN_DEACTIVATED)
 			continue;
-        }
 
 		err = device_create_file(&pdev->dev,
 					&sch5636_fan_attr[i].dev_attr);
 		if (err)
 			goto error;
-		pr_info("fans2: %d\n", i);
 	}
 
-    //here smooker
-//    /* Register common device attributes */
-//	err = sysfs_create_group(&dev->kobj, &sch5636_group);
-//	if (err)
-//		return err;
-
-//	/* Register chip-specific device attributes */
-//	if (data->type == sch5636 || data->type == w83697hf)
-//		if ((err = device_create_file(dev,
-//				&sensor_dev_attr_in5_input.dev_attr))
-//		 || (err = device_create_file(dev,
-//				&sensor_dev_attr_in5_min.dev_attr))
-//		 || (err = device_create_file(dev,
-//				&sensor_dev_attr_in5_max.dev_attr))
-
-
-    data->hwmon_dev = hwmon_device_register(&pdev->dev);            //here
+	data->hwmon_dev = hwmon_device_register(&pdev->dev);
 	if (IS_ERR(data->hwmon_dev)) {
 		err = PTR_ERR(data->hwmon_dev);
 		data->hwmon_dev = NULL;
@@ -560,104 +502,9 @@ static int sch5636_probe(struct platform_device *pdev)
 	return 0;
 
 error:
-    pr_info("mamata si eba neshto\n");
-//    sysfs_remove_group(&dev->kobj, &sch5636_group);
-//    sysfs_remove_group(&dev->kobj, &sch5636_group_opt);
 	sch5636_remove(pdev);
 	return err;
 }
-
-static ssize_t
-pwm_show(struct device *dev, struct device_attribute *devattr, char *buf)
-{
-    int nr = to_sensor_dev_attr(devattr)->index;
-    pr_info("here1\n");
-    struct sch5636_data *data = sch5636_update_device(dev);
-    return sprintf(buf, "%ld\n", (long) data->fan_val[nr]);
-}
-
-//here
-static ssize_t
-pwm_store(struct device *dev, struct device_attribute *devattr,
-      const char *buf, size_t count)
-{
-    int nr = to_sensor_dev_attr(devattr)->index;
-    struct sch5636_data *data = dev_get_drvdata(dev);
-    unsigned long val;
-    int err;
-
-    err = kstrtoul(buf, 10, &val);
-    if (err)
-        return err;
-
-    mutex_lock(&data->update_lock);
-
-    {
-        data->fan_ctrl[nr] = PWM_TO_REG(val);       //checkme
-
-        //here smooker
-//        sch5636_write_value(data,
-//                     W836X7HF_REG_PWM(data->type, nr),
-//                     data->fan_ctrl[nr]);
-    }
-
-    mutex_unlock(&data->update_lock);
-    return count;
-}
-
-
-static SENSOR_DEVICE_ATTR_RW(pwm1, pwm, 0);         //here smooker
-
-
-static ssize_t
-pwm_enable_show(struct device *dev, struct device_attribute *devattr,
-        char *buf)
-{
-    int nr = to_sensor_dev_attr(devattr)->index;
-    struct sch5636_data *data = sch5636_update_device(dev);
-    return sprintf(buf, "%d\n", data->fan_ctrl[nr]);
-}
-
-static ssize_t
-pwm_enable_store(struct device *dev, struct device_attribute *devattr,
-         const char *buf, size_t count)
-{
-    int nr = to_sensor_dev_attr(devattr)->index;
-    struct sch5636_data *data = dev_get_drvdata(dev);
-    u8 reg;
-    unsigned long val;
-    int err;
-
-    err = kstrtoul(buf, 10, &val);
-    if (err)
-        return err;
-
-    if (!val || val > 3)	/* modes 1, 2 and 3 are supported */
-        return -EINVAL;
-    mutex_lock(&data->update_lock);
-//    data->pwm_enable[nr] = val;
-//    reg = sch5636_read_value(data, W83627THF_REG_PWM_ENABLE[nr]);
-//    reg &= ~(0x03 << W83627THF_PWM_ENABLE_SHIFT[nr]);
-//    reg |= (val - 1) << W83627THF_PWM_ENABLE_SHIFT[nr];
-//    sch5636_write_value(data, W83627THF_REG_PWM_ENABLE[nr], reg);
-    mutex_unlock(&data->update_lock);
-    return count;
-}
-
-static SENSOR_DEVICE_ATTR_RW(pwm1_enable, pwm_enable, 0);
-
-
-
-
-
-//static ssize_t
-//name_show(struct device *dev, struct device_attribute *devattr, char *buf)
-//{
-//    struct sch5636_data *data = dev_get_drvdata(dev);
-//    return sprintf(buf, "%s\n", data->name);
-//}
-//static DEVICE_ATTR_RO(name);
-
 
 static struct platform_driver sch5636_driver = {
 	.driver = {
@@ -668,10 +515,6 @@ static struct platform_driver sch5636_driver = {
 };
 
 module_platform_driver(sch5636_driver);
-
-///* Register module functions */
-//module_init(sch5636_probe);
-//module_exit(sch5636_remove);
 
 MODULE_DESCRIPTION("SMSC SCH5636 Hardware Monitoring Driver");
 MODULE_AUTHOR("Hans de Goede <hdegoede@redhat.com>");

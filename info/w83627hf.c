@@ -1435,7 +1435,7 @@ static int w83627hf_probe(struct platform_device *pdev)
 	w83627hf_update_fan_div(data);
 
 	/* Register common device attributes */
-	err = sysfs_create_group(&dev->kobj, &w83627hf_group);
+    err = sysfs_create_group(&dev->kobj, &w83627hf_group);          //here smooker2
 	if (err)
 		return err;
 
@@ -1467,7 +1467,7 @@ static int w83627hf_probe(struct platform_device *pdev)
 				&sensor_dev_attr_pwm2_freq.dev_attr)))
 			goto error;
 
-	if (data->type != w83697hf)
+    if (data->type != w83697hf)                             //here smooker
 		if ((err = device_create_file(dev,
 				&sensor_dev_attr_in1_input.dev_attr))
 		 || (err = device_create_file(dev,
@@ -1518,7 +1518,7 @@ static int w83627hf_probe(struct platform_device *pdev)
 			goto error;
 	}
 
-	if (data->type == w83637hf || data->type == w83687thf)
+    if (data->type == w83637hf || data->type == w83687thf)          //smooker here
 		if ((err = device_create_file(dev,
 				&sensor_dev_attr_pwm1_freq.dev_attr))
 		 || (err = device_create_file(dev,
@@ -1551,8 +1551,8 @@ static int w83627hf_probe(struct platform_device *pdev)
 	return 0;
 
  error:
-	sysfs_remove_group(&dev->kobj, &w83627hf_group);
-	sysfs_remove_group(&dev->kobj, &w83627hf_group_opt);
+    sysfs_remove_group(&dev->kobj, &sch5636_group);
+    sysfs_remove_group(&dev->kobj, &sch5636_group_opt);
 	return err;
 }
 
