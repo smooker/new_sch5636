@@ -20,6 +20,10 @@
 #define DRVNAME "sch5636"
 #define DEVNAME "theseus" /* We only support one model for now */
 
+//smooker
+#define PWM_TO_REG(val) (clamp_val((val), 0, 255))
+
+
 #define SCH5636_REG_FUJITSU_ID		0x780
 #define SCH5636_REG_FUJITSU_REV		0x783
 
@@ -458,7 +462,7 @@ static int sch5636_probe(struct platform_device *pdev)
 			goto error;
 		}
 		data->fan_ctrl[i] = val;
-		pr_info("fans: %d\n", i);
+        pr_info("fans: %d:%d\n", i, val);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(sch5636_attr); i++) {
@@ -481,8 +485,10 @@ static int sch5636_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < (SCH5636_NO_FANS * 3); i++) {
-		if (data->fan_ctrl[i/3] & SCH5636_FAN_DEACTIVATED)
+        if (data->fan_ctrl[i/3] & SCH5636_FAN_DEACTIVATED) {
+            pr_info("fans deactivated: %d\n", i);
 			continue;
+        }
 
 		err = device_create_file(&pdev->dev,
 					&sch5636_fan_attr[i].dev_attr);
@@ -510,6 +516,44 @@ error:
 	sch5636_remove(pdev);
 	return err;
 }
+
+static ssize_t
+pwm_show(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    int nr = to_sensor_dev_attr(devattr)->index;
+    struct sch5636_data *data = sch5636_update_device(dev);
+    return sprintf(buf, "%ld\n", (long) data->fan_val[nr]);
+}
+
+//here
+static ssize_t
+pwm_store(struct device *dev, struct device_attribute *devattr,
+      const char *buf, size_t count)
+{
+    int nr = to_sensor_dev_attr(devattr)->index;
+    struct sch5636_data *data = dev_get_drvdata(dev);
+    unsigned long val;
+    int err;
+
+    err = kstrtoul(buf, 10, &val);
+    if (err)
+        return err;
+
+    mutex_lock(&data->update_lock);
+
+    {
+        data->fan_ctrl[nr] = PWM_TO_REG(val);
+//        w83627hf_write_value(data,
+//                     W836X7HF_REG_PWM(data->type, nr),
+//                     data->pwm[nr]);
+    }
+
+    mutex_unlock(&data->update_lock);
+    return count;
+}
+
+
+static SENSOR_DEVICE_ATTR_RW(pwm1, pwm, 0);
 
 static struct platform_driver sch5636_driver = {
 	.driver = {
