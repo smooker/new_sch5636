@@ -151,6 +151,7 @@ abort:
 	return ret;
 }
 
+//to be used
 static int reg_to_rpm(u16 reg)
 {
 	if (reg == 0)
@@ -162,9 +163,9 @@ static int reg_to_rpm(u16 reg)
 }
 
 static ssize_t name_show(struct device *dev, struct device_attribute *devattr,
-			 char *buf)
+             char *buf)
 {
-	return sysfs_emit(buf, "%s\n", DEVNAME);
+    return sysfs_emit(buf, "%s\n", DEVNAME);
 }
 
 static ssize_t in_value_show(struct device *dev,
@@ -521,6 +522,7 @@ static ssize_t
 pwm_show(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     int nr = to_sensor_dev_attr(devattr)->index;
+    pr_info("here1\n");
     struct sch5636_data *data = sch5636_update_device(dev);
     return sprintf(buf, "%ld\n", (long) data->fan_val[nr]);
 }
@@ -542,7 +544,8 @@ pwm_store(struct device *dev, struct device_attribute *devattr,
     mutex_lock(&data->update_lock);
 
     {
-        data->fan_ctrl[nr] = PWM_TO_REG(val);
+        data->fan_ctrl[nr] = PWM_TO_REG(val);       //checkme
+
 //        w83627hf_write_value(data,
 //                     W836X7HF_REG_PWM(data->type, nr),
 //                     data->pwm[nr]);
@@ -555,6 +558,15 @@ pwm_store(struct device *dev, struct device_attribute *devattr,
 
 static SENSOR_DEVICE_ATTR_RW(pwm1, pwm, 0);
 
+//static ssize_t
+//name_show(struct device *dev, struct device_attribute *devattr, char *buf)
+//{
+//    struct sch5636_data *data = dev_get_drvdata(dev);
+//    return sprintf(buf, "%s\n", data->name);
+//}
+//static DEVICE_ATTR_RO(name);
+
+
 static struct platform_driver sch5636_driver = {
 	.driver = {
 		.name	= DRVNAME,
@@ -564,6 +576,10 @@ static struct platform_driver sch5636_driver = {
 };
 
 module_platform_driver(sch5636_driver);
+
+/* Register module functions */
+module_init(sch5636_probe);
+module_exit(sch5636_remove);
 
 MODULE_DESCRIPTION("SMSC SCH5636 Hardware Monitoring Driver");
 MODULE_AUTHOR("Hans de Goede <hdegoede@redhat.com>");
