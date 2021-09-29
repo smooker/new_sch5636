@@ -506,7 +506,7 @@ static int sch5636_probe(struct platform_device *pdev)
 	return 0;
 
 error:
-  pr_info("mamata si eba neshto\n");
+    pr_info("mamata si eba neshto\n");
 	sch5636_remove(pdev);
 	return err;
 }
