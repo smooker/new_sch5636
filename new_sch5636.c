@@ -119,8 +119,16 @@ static struct sch5636_data *sch5636_update_device(struct device *dev)
 	}
 
 	for (i = 0; i < SCH5636_NO_FANS; i++) {
-		if (data->fan_ctrl[i] & SCH5636_FAN_DEACTIVATED)
+        sch56xx_write_virtual_reg(data->addr,
+                    SCH5636_REG_FAN_CTRL(i), 33); //here smooker
+
+        if (data->fan_ctrl[i] & SCH5636_FAN_DEACTIVATED) {
+            pr_info("fans33: %d:%d\n", i, data->fan_ctrl[i]);
 			continue;
+        }
+        pr_info("fans32: %d:%d\n", i, data->fan_ctrl[i]);
+
+        pr_info("fans34: %d:%d\n", i, data->fan_ctrl[i]);
 
 		val = sch56xx_read_virtual_reg16(data->addr,
 						 SCH5636_REG_FAN_VAL[i]);
@@ -139,6 +147,7 @@ static struct sch5636_data *sch5636_update_device(struct device *dev)
 		data->fan_ctrl[i] = val;
 		/* Alarms need to be explicitly write-cleared */
 		if (val & SCH5636_FAN_ALARM) {
+            pr_info("fans_alm: %d:%d\n", i, val);
 			sch56xx_write_virtual_reg(data->addr,
 						SCH5636_REG_FAN_CTRL(i), val);
 		}
@@ -262,7 +271,9 @@ static ssize_t fan_fault_show(struct device *dev,
 	if (IS_ERR(data))
 		return PTR_ERR(data);
 
-	val = (data->fan_ctrl[attr->index] & SCH5636_FAN_NOT_PRESENT) ? 1 : 0;
+    val = (data->fan_ctrl[attr->index] & SCH5636_FAN_NOT_PRESENT) ? 1 : 0;
+//    val = (data->fan_ctrl[attr->index]) ? 1 : 0;    //all fault
+    pr_info("fan not present: %d:%d:%d\n", attr->index, data->fan_ctrl[attr->index], val);
 	return sysfs_emit(buf, "%d\n", val);
 }
 
@@ -506,7 +517,7 @@ static int sch5636_probe(struct platform_device *pdev)
 
     //????
 	for (i = 0; i < (SCH5636_NO_TEMPS * 3); i++) {
-		if (data->temp_ctrl[i/3] & SCH5636_TEMP_DEACTIVATED)
+        if (data->temp_ctrl[i/3] & SCH5636_TEMP_DEACTIVATED)
 			continue;
 
 		err = device_create_file(&pdev->dev,

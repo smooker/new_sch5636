@@ -133,6 +133,7 @@ static int sch56xx_send_cmd(u16 addr, u8 cmd, u16 reg, u8 v)
 
 	/* EM Interface Polling "Algorithm" */
 	for (i = 0; i < max_busy_polls + max_lazy_polls; i++) {
+		pr_info("ret:%d\n", i);
 		if (i >= max_busy_polls)
 			msleep(1);
 		/* Read Interrupt source Register */
